@@ -2,7 +2,10 @@ package com.example.hms.controllers;
 
 import com.example.hms.models.Appointment;
 import com.example.hms.service.AppointmentService;
+import com.example.hms.service.WebhookService;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,10 +23,27 @@ public class AppointmentController {
   @Autowired
   private AppointmentService appointmentService;
 
+  @Autowired
+  private WebhookService webhookService;
+
   @PostMapping
   public Appointment createAppointment(@RequestBody Appointment appointment){
     System.out.println("Creating Appointment");
-    return appointmentService.saveAppointment(appointment);
+
+    Appointment appointmentCreated = appointmentService.saveAppointment(appointment);
+
+    //Create the Payload for Appointment Webhook Call
+    Map<String,Object> payload = new HashMap<>();
+    payload.put("Appointment Id", appointment.getId());
+    payload.put("Doctor Id", appointment.getDoctorId());
+    payload.put("Patient Id", appointment.getPatientId());
+    payload.put("Date", appointment.getDate());
+
+    //Send the payload to webhook
+    String webhookUrl = "http://localhost:8081/webhook";
+    webhookService.sendWebhook(webhookUrl, payload);
+
+    return appointmentCreated;
   }
 
   @GetMapping
